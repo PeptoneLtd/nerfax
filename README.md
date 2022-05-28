@@ -1,14 +1,14 @@
 # NeRFax
-<img src="https://github.com/PeptoneInc/nerfax/blob/main/data/NeRFax-cover.jpg" width="801" height="390">   
+<img src="https://github.com/PeptoneLtd/nerfax/blob/main/data/NeRFax-cover.jpg" width="801" height="390">   
 In this work we implement NeRF and, to the best of our knowledge, the first fully parallel implementation of pNeRF in an emerging framework, JAX. We demonstrate speedups in the range 35-175x in comparison to the fastest public implementation for single chain proteins and utilising the frameworks ability to trivially parallelise functions we show a >10,000x speedup relative to using mp-NeRF serially for a biomolecular condensate of 1,000 chains of 163 residues.
 
 # Benchmarks
 ## Single chain
 ### Runtime of different computational methods for single chains  
-<img src="https://github.com/PeptoneInc/nerfax/blob/main/data/speedup.png" width="300" height="200">     
+<img src="https://github.com/PeptoneLtd/nerfax/blob/main/data/speedup.png" width="300" height="200">     
 
 ### Speedup, relative to the CPU mp_nerf implementation, of different computational methods for single chains  
-<img src="https://github.com/PeptoneInc/nerfax/blob/main/data/timings.png" width="300" height="200">   
+<img src="https://github.com/PeptoneLtd/nerfax/blob/main/data/timings.png" width="300" height="200">   
 
 This can be reproduced with `notebooks/benchmark_single_chain_reconstruction.ipynb`.
 ## Multiple chains: Biomolecular condensate reconstruction
@@ -17,7 +17,7 @@ Leveraging the automatic vectorization feature of JAX the reconstruction was par
 # Installation
 ## Pip
 ```bash
-git clone https://github.com/PeptoneInc/nerfax.git && pip install ./nerfax[optional]
+git clone https://github.com/PeptoneLtd/nerfax.git && pip install ./nerfax[optional]
 ```
 Note: for running on GPU, a GPU version of JAX must be installed, please follows the instructions at [JAX GPU compatibility instructions](https://github.com/google/jax#pip-installation-gpu-cuda)
 ## Docker image
