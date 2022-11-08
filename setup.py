@@ -17,8 +17,9 @@ setup(
     'mp_nerf==1.0.3',
     'jax>=0.3.0',
     'jaxlib>=0.3.0',
+    'mdtraj',
   ],
   extras_require = {
-      'optional':  ['plotly', 'sidechainnet', 'pandas', 'nglview', 'mdtraj'],
+      'optional':  ['plotly', 'sidechainnet', 'pandas', 'nglview'],
   }
 )
