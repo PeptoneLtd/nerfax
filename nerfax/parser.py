@@ -99,7 +99,7 @@ def get_point_ref_and_cloud_mask(seq):
     point_ref_per_aa = np.stack(list(map(get_point_ref_with_final,AA))).astype(int)
     point_ref = jnp.einsum('ijk->kij', point_ref_per_aa[aa_to_index(seq)])
 
-    cloud_mask_per_aa = np.stack(list(map(mp_nerf.make_cloud_mask,AA))).astype(bool)
+    cloud_mask_per_aa = jnp.stack(list(map(mp_nerf.make_cloud_mask,AA))).astype(bool)
     cloud_mask = cloud_mask_per_aa[aa_to_index(seq)]
     return point_ref, cloud_mask
 
