@@ -18,6 +18,7 @@ setup(
     'jax>=0.3.0',
     'jaxlib>=0.3.0',
     'mdtraj',
+    'Bio'
   ],
   extras_require = {
       'optional':  ['plotly', 'sidechainnet', 'pandas', 'nglview'],
