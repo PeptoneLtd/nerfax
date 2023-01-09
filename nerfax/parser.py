@@ -109,10 +109,10 @@ def get_data_masks(coords, point_ref):
     '''
     # We force [2,1,0,4] reference for CB to be sure to pull out all CB relevant positions
     # as we will use atoms from the previous residue here
-    point_ref = point_ref.at[:,:,1].set(jnp.array([2,0,1,4])[...,None])
+    point_ref_mod = point_ref.at[:,:,1].set(jnp.array([2,0,1,4])[...,None])
     
     # coords - (L,14,3). Point_ref (4,L,11) [note, 4 in first axis, not 3 as in point_ref_mask as we use the placed position index here]
-    ref_coords = vmap(lambda x,y: x[y], in_axes=(0,1))(coords, point_ref).swapaxes(1,2)
+    ref_coords = vmap(lambda x,y: x[y], in_axes=(0,1))(coords, point_ref_mod).swapaxes(1,2)
 
     '''
     Fix indexing for residue 0 C-beta. Normally for CB(i) is placed C(i-1)-N(i)-CA(i)->CB(i)
