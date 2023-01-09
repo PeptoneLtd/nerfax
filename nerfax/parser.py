@@ -136,6 +136,12 @@ def get_data_masks(coords, point_ref):
     angles = angles.at[0,0].set(1.) # Non zero value for first angle, which is really a 'ghost' one
     bond_mask = lengths
     angles_mask = jnp.stack([angles, dihedrals])
+
+    # fix incidental angles extraction for phantom CB on glycines
+    mask = (point_ref[:,:,1]==0).all(0)
+    bond_mask = bond_mask.at[mask, 4].set(0.)
+    angles_mask = angles_mask.at[:,mask,4].set(0.)
+
     return bond_mask, angles_mask
 
 def make_scaffolds(coords, seq):
