@@ -1,5 +1,4 @@
 import struct
-# from Bio.Data.IUPACData import protein_letters_3to1
 import numpy as np
 
 import jax
@@ -180,21 +179,22 @@ def continuize_sidechain_angles(sideChainAnglesDiscretized):
     return sideChainAngles
 
 def reconstruct_sidechains(aas, sideChainAnglesDiscretized, bb_pos):
-    lengths, angles, placement_dependencies, atom_mask = jax.tree_map(lambda x: x[aas],
+    lengths, angles, placement_dependencies, atom_mask = jax.tree_map(lambda x: jnp.array(x).at[aas].get(),
         (AA_REF_BOND_LENGTHS, 
         AA_REF_ANGLES, 
         AA_PLACEMENT_DEPENDENCIES, 
         AA_REF_ATOM_MASK))
 
     sideChainAngles = continuize_sidechain_angles(sideChainAnglesDiscretized)
-    torsions = jnp.zeros(atom_mask.shape).at[atom_mask].set(sideChainAngles)
+    sidechain_indexs = jnp.where(atom_mask, size=sideChainAngles.shape[0]) # fixed size for jit
+    torsions = jnp.zeros(atom_mask.shape).at[sidechain_indexs].set(sideChainAngles)
 
     reconstructed_sparse_coords = place_sidechains(
-        cloud_mask=jnp.array(atom_mask), 
+        cloud_mask=atom_mask, 
         point_ref_mask=jnp.transpose(placement_dependencies, (2,0,1)), 
         angles_mask=jnp.stack([angles, torsions]), 
-        bond_mask=jnp.array(lengths), 
-        bb_coords=jnp.array(bb_pos.reshape(-1,3,3))
+        bond_mask=lengths, 
+        bb_coords=bb_pos.reshape(-1,3,3)
     )
     reconstructed_coords = reconstructed_sparse_coords[
         jnp.concatenate([
