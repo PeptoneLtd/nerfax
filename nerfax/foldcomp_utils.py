@@ -94,34 +94,6 @@ def reconstruct_both_ways(lengths, angles, torsions, anchors):
     coords_w_avg = coords*(1-w) + reverse(coords_bwd)*w
     return jnp.concatenate([anchors[:-1], coords_w_avg], axis=1).reshape(-1,3)
 
-# def reconstruct_backbone(angles_torsions_discretizers, angles_torsions, anchorIndices, anchorCoords):
-#     # continuize backbone torsions and angles
-#     mins, conf_fs = angles_torsions_discretizers # swap so ordering matches
-#     # (phi,psi,omega, n_ca_c_angle, ca_c_n_angle, c_n_ca_angle) ordering in axis=1 [phi,psi,omega, n_ca_c_angle, ca_c_n_angle, c_n_ca_angle = angles_torsions_cont.T]
-#     angles_torsions_cont = (angles_torsions*conf_fs+mins) * (jnp.pi/180) # convert to radians
-
-#     # reorder so we place (anchors)-N->CA->C->... so N first
-#     # hence we need (CA-C-N, psi, length C-N) then (C-N-CA, omega, length N-CA) then (N-CA-C,phi,CA-C) on repeat
-#     torsions = angles_torsions_cont[...,[1,2,0]]
-#     angles = angles_torsions_cont[...,[4,5,3]]
-#     angles = jnp.pi - angles # due to historical scnet reasons, the scnet angle is defined as pi-angle. It seems they've used scnet defn here
-
-#     # there's a body of reconstruction all equally spaced (normally 25 spaced)
-#     m = int(anchorIndices[1]-anchorIndices[0])
-#     n = anchorIndices.shape[0]-2
-#     lengths_body = jnp.tile(BACKBONE_BOND_LENGTHS, m*n).reshape((n, m*3))
-#     angles_body, torsions_body = (x[:n*m].reshape(n, m*3) for x in (angles, torsions))
-#     coords_body = reconstruct_both_ways(lengths_body, angles_body, torsions_body, anchorCoords[:-1])
-
-#     # final set of reconstruction can be varying length
-#     p = int(anchorIndices[-1]-anchorIndices[-2])
-#     lengths_end = jnp.tile(BACKBONE_BOND_LENGTHS, p).reshape((1, p*3))
-#     angles_end, torsions_end = (x[n*m:n*m+p].reshape(1, -1) for x in (angles, torsions))
-#     coords_end = reconstruct_both_ways(lengths_end, angles_end, torsions_end, anchorCoords[-2:])
-
-#     bb_pos = jnp.concatenate([coords_body, coords_end, anchorCoords[-1]])
-#     return bb_pos
-
 def reconstruct_backbone(angles_torsions_discretizers, anchorCoords, angles_torsions_body, angles_torsions_end):
     angles_torsions_end = angles_torsions_end[None, :-1]
 
@@ -158,7 +130,9 @@ def place_sidechains(cloud_mask, point_ref_mask, angles_mask, bond_mask, bb_coor
     n = bb_coords.shape[0]
     coords = jnp.concatenate([bb_coords, jnp.zeros((n,11,3))], axis=-2)
     for i in range(11):
-        level_mask = cloud_mask[:, i]
+        with jax.ensure_compile_time_eval():
+            # taken out so booleans known, we have no way of inferring shape here without concrete values
+            level_mask = cloud_mask[:, i]
         thetas, dihedrals = angles_mask[:, level_mask, i]
         idx_a, idx_b, idx_c = point_ref_mask[:, level_mask, i]
         placed_coords = vmap(mp_nerf_jax)(
@@ -179,14 +153,19 @@ def continuize_sidechain_angles(sideChainAnglesDiscretized):
     return sideChainAngles
 
 def reconstruct_sidechains(aas, sideChainAnglesDiscretized, bb_pos):
-    lengths, angles, placement_dependencies, atom_mask = jax.tree_map(lambda x: jnp.array(x).at[aas].get(),
+    lengths, angles, placement_dependencies = jax.tree_map(lambda x: jnp.array(x).at[aas].get(),
         (AA_REF_BOND_LENGTHS, 
         AA_REF_ANGLES, 
         AA_PLACEMENT_DEPENDENCIES, 
-        AA_REF_ATOM_MASK))
+        # AA_REF_ATOM_MASK
+        ))
+
+    # taken out so booleans known
+    with jax.ensure_compile_time_eval():
+        atom_mask = jnp.array(AA_REF_ATOM_MASK).at[aas].get()
 
     sideChainAngles = continuize_sidechain_angles(sideChainAnglesDiscretized)
-    sidechain_indexs = jnp.where(atom_mask, size=sideChainAngles.shape[0]) # fixed size for jit
+    sidechain_indexs = atom_mask.nonzero(size=sideChainAngles.shape[0])  # fixed size for jit, this is known
     torsions = jnp.zeros(atom_mask.shape).at[sidechain_indexs].set(sideChainAngles)
 
     reconstructed_sparse_coords = place_sidechains(
@@ -196,12 +175,13 @@ def reconstruct_sidechains(aas, sideChainAnglesDiscretized, bb_pos):
         bond_mask=lengths, 
         bb_coords=bb_pos.reshape(-1,3,3)
     )
-    reconstructed_coords = reconstructed_sparse_coords[
-        jnp.concatenate([
-            jnp.ones((atom_mask.shape[0], 3), dtype=bool), 
-            atom_mask
-        ], axis=1)
-    ]
+
+    full_atom_mask = jnp.concatenate([
+        jnp.ones((atom_mask.shape[0], 3), dtype=bool), 
+        atom_mask
+    ], axis=1)
+    full_atom_mask_indices = full_atom_mask.nonzero(size=aas.shape[0]*3+sideChainAnglesDiscretized.shape[0]) # known shape
+    reconstructed_coords = reconstructed_sparse_coords[full_atom_mask_indices]
     return reconstructed_coords
 
 def reconstruct(angles_torsions_discretizers, angles_torsions_body, angles_torsions_end, anchorCoords, aas, sideChainAnglesDiscretized, hasOXT, oxtCoords):
