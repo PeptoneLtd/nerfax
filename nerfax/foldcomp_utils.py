@@ -188,7 +188,7 @@ def reconstruct(angles_torsions_discretizers, angles_torsions_body, angles_torsi
     bb_coords = reconstruct_backbone(angles_torsions_discretizers, anchorCoords, angles_torsions_body, angles_torsions_end)
     coords = reconstruct_sidechains(aas, sideChainAnglesDiscretized, bb_coords)
     if (hasOXT):
-        coords = jnp.concatenate([coords, jnp.array(oxtCoords)])
+        coords = jnp.concatenate([coords, oxtCoords[None]])
     return coords    
 
 def decompress(path):
