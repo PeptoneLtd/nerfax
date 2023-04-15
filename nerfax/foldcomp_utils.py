@@ -43,7 +43,7 @@ def load_data(path):
     aas_body, angles_torsions_body = load_backbone_data(fcz, split_index)
     aas_end, angles_torsions_end = load_backbone_data(fcz, nResidue-split_index)
     aas = np.concatenate([aas_body, aas_end])
-    angles_torsions_body = angles_torsions_body.reshape(anchorIndices.shape[0]-2, -1, 6)
+    angles_torsions_body = angles_torsions_body.reshape(anchorIndices.shape[0]-2, -1 if (anchorIndices.shape[0]!=2) else 0, 6)
 
     # encodedSideChain = np.ceil(nSideChainTorsion/2).astype(int) # half rounded upwards
     # maybe need to add 1 to sc if odd number?
@@ -113,10 +113,13 @@ def reconstruct_backbone(angles_torsions_discretizers, anchorCoords, angles_tors
         angles, torsions = [x.reshape((x.shape[0], -1)) for x in (angles, torsions)]
         return angles, torsions
 
-    # there's a body of reconstruction all equally spaced (normally 25 spaced)    
-    angles_body, torsions_body = process(angles_torsions_body)
-    lengths_body = jnp.broadcast_to(jnp.tile(BACKBONE_BOND_LENGTHS, angles_body.shape[-1]//3), angles_body.shape)
-    coords_body = reconstruct_both_ways(lengths_body, angles_body, torsions_body, anchorCoords[:-1])
+    # there's a body of reconstruction all equally spaced (normally 25 spaced)
+    if (angles_torsions_body.shape[0]!=0): # deal with empty body
+        angles_body, torsions_body = process(angles_torsions_body)
+        lengths_body = jnp.broadcast_to(jnp.tile(BACKBONE_BOND_LENGTHS, angles_body.shape[-1]//3), angles_body.shape)
+        coords_body = reconstruct_both_ways(lengths_body, angles_body, torsions_body, anchorCoords[:-1])
+    else:
+        coords_body = jnp.zeros((0,3))
 
     # final set of reconstruction can be varying length
     angles_end, torsions_end = process(angles_torsions_end)
