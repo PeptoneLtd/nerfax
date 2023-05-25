@@ -7,6 +7,12 @@ from jax import numpy as jnp, vmap
 from nerfax.reconstruct import mp_nerf_jax_pretrig_self_normalising, normalise, mp_nerf_jax
 from nerfax.foldcomp_constants import AA_REF_BOND_LENGTHS, AA_REF_ANGLES, AA_PLACEMENT_DEPENDENCIES, AA_REF_ATOM_MASK, BACKBONE_BOND_LENGTHS
 
+AA_N_SC_ATOMS = jnp.array(AA_REF_ATOM_MASK.sum(-1)-1, dtype=int)
+def get_sc_shapes(aas):
+  counts = jnp.zeros(11, dtype=int).at[AA_N_SC_ATOMS[aas]].add(1)
+  sc_shapes = jax.lax.cumsum(counts, reverse=True)
+  return sc_shapes
+
 def load_backbone_data(fcz, n):
     d = np.frombuffer(fcz.read(8*n), dtype=np.uint8).reshape(-1,8).astype(np.uint16)
     aas = (d[:,0] & 0xF8) >>3
