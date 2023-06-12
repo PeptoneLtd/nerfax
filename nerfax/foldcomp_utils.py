@@ -26,6 +26,33 @@ def load_backbone_data(fcz, n):
     angles_torsions = d[:,[2,1,0,7,5,6]] 
     return aas, angles_torsions
 
+'''
+Breakdown of number of bytes for each section in fcz file
+28 - Metadata
+    4 - tag `FCMP`
+    2 - nResidue
+    2 - nAtom
+    2 - idxResidue
+    2 - idxAtom
+    1 - nAnchor
+    1 - chain
+    2 - (buffer)
+    4 - nSideChainTorsion
+    1 - firstResidue 1 letter aa code
+    1 - lastResidue 1 letter aa code
+    2 - (buffer)
+    4 - lenTitle
+48 - Sidechain Discretizers
+4*nAnchor - Anchor Indices
+lenTitle - Title
+36*nAnchor - Anchor Coords
+1 - Boolean for if OXT present
+12 - Coords for OXT
+8*nResidue - Backbone data (aa_one_letter_code, omega, psi, phi, ca_c_n_angle, c_n_ca_angle, n_ca_c_angle) packed into 64 bits
+2*nSideChainTorsion - Sidechain data
+8 - Temperature factor Discretizers
+1*nResidue - Temperature factor per residue
+'''
 def load_data(path):
     fcz = open(path, "rb")
     # tag, nResidue, nAtom, idxResidue, idxAtom, nAnchor, chain, _, \
@@ -33,8 +60,8 @@ def load_data(path):
     # phiDisc_min,psiDisc_min,omegaDisc_min,n_ca_c_angleDisc_min,ca_c_n_angleDisc_min,c_n_ca_angleDisc_min, \
     # phiDisc_cont_f,psiDisc_cont_f,omegaDisc_cont_f,n_ca_c_angleDisc_cont_f,ca_c_n_angleDisc_cont_f,c_n_ca_angleDisc_cont_f = struct.unpack('@4s4HBccIcccI12f' ,fcz.read(76))
 
-    tag, nResidue, nAtom, idxResidue, idxAtom, nAnchor, chain, _, \
-    nSideChainTorsion,firstResidue,lastResidue,_,lenTitle = struct.unpack('@4s4HBccIcccI' ,fcz.read(28))
+    tag, nResidue, nAtom, idxResidue, idxAtom, nAnchor, chain, \
+    nSideChainTorsion,firstResidue,lastResidue,lenTitle = struct.unpack('@4s4HBcxxIccxxI' ,fcz.read(28))
     angles_torsions_discretizers = np.frombuffer(fcz.read(48), dtype=np.float32).reshape(2,6)
 
     anchorIndices = np.frombuffer(fcz.read(nAnchor*4), dtype=np.uint32)
