@@ -5,11 +5,10 @@ import jax
 from jax import numpy as jnp, vmap
 
 from nerfax.reconstruct import mp_nerf_jax_pretrig_self_normalising, normalise, mp_nerf_jax
-from nerfax.foldcomp_constants import AA_REF_BOND_LENGTHS, AA_REF_ANGLES, AA_PLACEMENT_DEPENDENCIES, AA_REF_ATOM_MASK, BACKBONE_BOND_LENGTHS
+from nerfax.foldcomp_constants import AA_REF_BOND_LENGTHS, AA_REF_ANGLES, AA_PLACEMENT_DEPENDENCIES, AA_REF_ATOM_MASK, BACKBONE_BOND_LENGTHS, AA_N_SC_ATOMS
 
-AA_N_SC_ATOMS = jnp.array(AA_REF_ATOM_MASK.sum(-1)-1, dtype=int)
 def get_sc_shapes(aas):
-  counts = jnp.zeros(11, dtype=int).at[AA_N_SC_ATOMS[aas]].add(1)
+  counts = jnp.zeros(11, dtype=int).at[(AA_N_SC_ATOMS-1)[aas]].add(1)
   sc_shapes = jax.lax.cumsum(counts, reverse=True)
   return sc_shapes
 
@@ -44,17 +43,31 @@ Breakdown of number of bytes for each section in fcz file
     4 - lenTitle
 48 - Sidechain Discretizers
 4*nAnchor - Anchor Indices
-lenTitle - Title
+1*lenTitle - Title
 36*nAnchor - Anchor Coords
 1 - Boolean for if OXT present
 12 - Coords for OXT
 8*nResidue - Backbone data (aa_one_letter_code, omega, psi, phi, ca_c_n_angle, c_n_ca_angle, n_ca_c_angle) packed into 64 bits
-2*nSideChainTorsion - Sidechain data
+1*nSideChainTorsion - Sidechain data
 8 - Temperature factor Discretizers
 1*nResidue - Temperature factor per residue
+
+as a list: [
+    28,
+    48,
+    4*nAnchor, 
+    lenTitle, 
+    36*nAnchor, 
+    1, 
+    12, 
+    8*nResidue, 
+    nSideChainTorsion, 
+    8, 
+    nResidue
+]
 '''
-def load_data(path):
-    fcz = open(path, "rb")
+
+def _load_data(fcz): # readable file, bytesio
     # tag, nResidue, nAtom, idxResidue, idxAtom, nAnchor, chain, _, \
     # nSideChainTorsion,firstResidue,lastResidue,_,lenTitle, \
     # phiDisc_min,psiDisc_min,omegaDisc_min,n_ca_c_angleDisc_min,ca_c_n_angleDisc_min,c_n_ca_angleDisc_min, \
@@ -86,6 +99,10 @@ def load_data(path):
 
     # print(fcz.read())
     return (tag, nResidue, nAtom, idxResidue, idxAtom, nAnchor, chain, firstResidue,lastResidue, strTitle), (anchorIndices, anchorCoords), (hasOXT, oxtCoords), aas, (angles_torsions_discretizers, angles_torsions_body, angles_torsions_end), sideChainAnglesDiscretized, (tempFactorsDisc_min, tempFactorsDisc_cont_f, tempFactorsDisc)
+
+def load_data(path):
+    fcz = open(path, "rb")
+    return _load_data(fcz)
 
 reverse = lambda x: jnp.flip(x, axis=1)
 expand = lambda x: (jnp.sin(x), jnp.cos(x)) # expand x in sin,cos basis

@@ -503,6 +503,32 @@ AA_PLACEMENT_DEPENDENCIES = np.array([[
     [ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 11,  0,  0]]]).T
 
 AA_REF_ATOM_MASK = ~(AA_PLACEMENT_DEPENDENCIES==0).all(-1)
+AA_N_SC_ATOMS = np.concatenate([
+    np.array(AA_REF_ATOM_MASK.sum(-1), dtype=int),
+    np.zeros(4, dtype=int) # for B,Z,*,X
+])
 
 # {"N_TO_CA", 1.46}, {"CA_TO_C", 1.52}, {"C_TO_N", 1.33}
 BACKBONE_BOND_LENGTHS = np.array([1.33,1.46,1.52])
+
+ATOM_ORDER = {
+ 'ALA': ['N', 'CA', 'C', 'O', 'CB'],
+ 'ARG': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD', 'NE', 'CZ', 'NH1', 'NH2'],
+ 'ASN': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'OD1', 'ND2'],
+ 'ASP': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'OD1', 'OD2'],
+ 'CYS': ['N', 'CA', 'C', 'O', 'CB', 'SG'],
+ 'GLN': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD', 'OE1', 'NE2'],
+ 'GLU': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD', 'OE1', 'OE2'],
+ 'GLY': ['N', 'CA', 'C', 'O'],
+ 'HIS': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'ND1', 'CD2', 'CE1', 'NE2'],
+ 'ILE': ['N', 'CA', 'C', 'O', 'CB', 'CG1', 'CG2', 'CD1'],
+ 'LEU': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD1', 'CD2'],
+ 'LYS': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD', 'CE', 'NZ'],
+ 'MET': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'SD', 'CE'],
+ 'PHE': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD1', 'CD2', 'CE1', 'CE2', 'CZ'],
+ 'PRO': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD'],
+ 'SER': ['N', 'CA', 'C', 'O', 'CB', 'OG'],
+ 'THR': ['N', 'CA', 'C', 'O', 'CB', 'OG1', 'CG2'],
+ 'TRP': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD1', 'CD2', 'NE1', 'CE2', 'CE3', 'CZ2', 'CZ3', 'CH2'],
+ 'TYR': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD1', 'CD2', 'CE1', 'CE2', 'CZ', 'OH'],
+ 'VAL': ['N', 'CA', 'C', 'O', 'CB', 'CG1', 'CG2']}
