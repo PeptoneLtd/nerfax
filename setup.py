@@ -14,13 +14,13 @@ setup(
     'bioinformatics',
   ],
   install_requires=[
-    'mp_nerf==1.0.3',
+    # 'mp_nerf==1.0.3',
     'jax>=0.3.0',
     'jaxlib>=0.3.0',
     'mdtraj',
-    'Bio'
+    'Bio',
   ],
   extras_require = {
-      'optional':  ['plotly', 'sidechainnet', 'pandas', 'nglview'],
+      'optional':  ['plotly', 'pandas', 'sidechainnet', 'nglview'],
   }
 )

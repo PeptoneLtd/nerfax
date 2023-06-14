@@ -2,7 +2,7 @@ from functools import partial
 from jax import random, numpy as jnp, vmap, jit, grad
 import jax
 from nerfax.reconstruct import reconstruct_from_internal_coordinates, mp_nerf_jax
-import torch
+import numpy as np
 
 roll_first_col_in_last_axis = lambda x, roll=1: jnp.concatenate([jnp.roll(x[...,:1], roll, axis=-2), x[...,1:]], axis=-1)
 # Convert between scnet odd conventions and 'natural' ones. #FIXME make bijector.
@@ -75,7 +75,7 @@ def get_jax_protein_fold(scaffolds, only_backbone=False, reconstruct_fn=reconstr
         jit-compiled op converting internal->cartesian coords
         for that specific protein
     '''
-    cloud_mask, point_ref_mask= [jnp.array(x.cpu() if isinstance(x, torch.Tensor) else x) for x in map(scaffolds.__getitem__, ['cloud_mask', 'point_ref_mask'])]
+    cloud_mask, point_ref_mask= [(jnp.array(np.array(x)) if not isinstance(x, jax.Array) else x) for x in map(scaffolds.__getitem__, ['cloud_mask', 'point_ref_mask'])]
     def _fold(angles_mask, bond_mask, only_backbone=only_backbone):
         with jax.ensure_compile_time_eval():
             return protein_fold(cloud_mask, point_ref_mask, angles_mask, bond_mask, only_backbone=only_backbone, reconstruct_fn=reconstruct_fn)

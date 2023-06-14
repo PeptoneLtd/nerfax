@@ -2,12 +2,11 @@ import numpy as np
 import mdtraj as md
 from Bio.Data import IUPACData
 from collections import defaultdict
-import mp_nerf
 from jax import vmap, numpy as jnp, lax
 
-AA = set(mp_nerf.kb_proteins.SC_BUILD_INFO.keys())-set('_')
+from nerfax.mpnerf_constants import SC_BUILD_INFO, make_idx_mask, make_cloud_mask
+AA = ['A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V'] # set(mp_nerf.kb_proteins.SC_BUILD_INFO.keys())-set('_')
 aa_to_index = lambda seq: np.vectorize({v:k for k,v in enumerate(AA)}.__getitem__)(list(seq))
-
 
 def calculate_angle(c1, c2, c3):
     # Credit to https://github.com/EleutherAI/mp_nerf
@@ -50,7 +49,7 @@ def get_scnet_loader_fns(t):
     Requires ALL heavy sidechain atoms to be present
     Convert positions from pdb to (L,14,3) format
     '''
-    sc_atomnames = {k:'N CA C O'.split()+v['atom-names'] for k,v in mp_nerf.kb_proteins.SC_BUILD_INFO.items() if k!='_'}
+    sc_atomnames = {k:'N CA C O'.split()+v['atom-names'] for k,v in SC_BUILD_INFO.items() if k!='_'}
     sc_net_coord_dict = {f'{aa}-{atomname}':i for aa, atomnames in sc_atomnames.items() for i, atomname in enumerate(atomnames)}
 
     d = t.top.to_dataframe()[0]
@@ -87,9 +86,9 @@ def load_to_sc_coord_format(path, first_frame_only=True):
     return coords, seq
 
 def get_point_ref_with_final(aa):
-    ref_indices = mp_nerf.make_idx_mask(aa).astype(int)
+    ref_indices = make_idx_mask(aa).astype(int)
     final_index = np.arange(11)+3
-    mask = mp_nerf.make_cloud_mask(aa)[3:].astype(bool)
+    mask = make_cloud_mask(aa)[3:].astype(bool)
     final_index[~mask]=0
     return np.concatenate([ref_indices, final_index[...,None]], axis=-1)
 
@@ -99,7 +98,7 @@ def get_point_ref_and_cloud_mask(seq):
     point_ref_per_aa = np.stack(list(map(get_point_ref_with_final,AA))).astype(int)
     point_ref = jnp.einsum('ijk->kij', point_ref_per_aa[aa_to_index(seq)])
 
-    cloud_mask_per_aa = jnp.stack(list(map(mp_nerf.make_cloud_mask,AA))).astype(bool)
+    cloud_mask_per_aa = jnp.stack(list(map(make_cloud_mask,AA))).astype(bool)
     cloud_mask = cloud_mask_per_aa[aa_to_index(seq)]
     return point_ref, cloud_mask
 
