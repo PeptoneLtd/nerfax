@@ -7,6 +7,7 @@ from jax import vmap, numpy as jnp, lax
 from nerfax.mpnerf_constants import SC_BUILD_INFO, make_idx_mask, make_cloud_mask
 AA = ['A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V'] # set(mp_nerf.kb_proteins.SC_BUILD_INFO.keys())-set('_')
 aa_to_index = lambda seq: np.vectorize({v:k for k,v in enumerate(AA)}.__getitem__)(list(seq))
+insert_zero = lambda x: jnp.concatenate([jnp.zeros((1,)+x.shape[1:], dtype=x.dtype), x])
 
 def calculate_angle(c1, c2, c3):
     # Credit to https://github.com/EleutherAI/mp_nerf
@@ -128,7 +129,6 @@ def get_data_masks(coords, point_ref):
     ## Pull out the lengths, angles and dihedrals
     data_sc = vmap(decompose_quad)(ref_coords) # lengths, angles, dihedrals
 
-    insert_zero = lambda x: jnp.concatenate([jnp.zeros((1,)+x.shape[1:], dtype=x.dtype), x])
     data_bb = xyz_to_internal_coords(insert_zero(coords[:,:3]).reshape(-1,3)) # Dummy reference residue used
     lengths, angles, dihedrals = [jnp.concatenate([bb,sc], axis=-1) for bb,sc in zip(data_bb, data_sc)]
     
