@@ -101,7 +101,7 @@ def _load_data(fcz): # readable file, bytesio
     return (tag, nResidue, nAtom, idxResidue, idxAtom, nAnchor, chain, firstResidue,lastResidue, strTitle), (anchorIndices, anchorCoords), (hasOXT, oxtCoords), aas, (angles_torsions_discretizers, angles_torsions_body, angles_torsions_end), sideChainAnglesDiscretized, (tempFactorsDisc_min, tempFactorsDisc_cont_f, tempFactorsDisc)
 
 def load_data(path):
-    fcz = open(path, "rb")
+    fcz = open(path, "rb") if (not hasattr(path, 'read')) else path # check if they've passed a handle
     return _load_data(fcz)
 
 reverse = lambda x: jnp.flip(x, axis=1)
@@ -145,8 +145,6 @@ def reconstruct_both_ways(lengths, angles, torsions, anchors):
     return jnp.concatenate([anchors[:-1], coords_w_avg], axis=1).reshape(-1,3)
 
 def reconstruct_backbone(angles_torsions_discretizers, anchorCoords, angles_torsions_body, angles_torsions_end):
-    angles_torsions_end = angles_torsions_end[None, :-1]
-
     # continuize backbone torsions and angles
     mins, conf_fs = angles_torsions_discretizers # swap so ordering matches
     
@@ -164,19 +162,26 @@ def reconstruct_backbone(angles_torsions_discretizers, anchorCoords, angles_tors
         return angles, torsions
 
     # there's a body of reconstruction all equally spaced (normally 25 spaced)
-    if (angles_torsions_body.shape[0]!=0): # deal with empty body
+    if (angles_torsions_body is not None): # deal with empty body
         angles_body, torsions_body = process(angles_torsions_body)
         lengths_body = jnp.broadcast_to(jnp.tile(BACKBONE_BOND_LENGTHS, angles_body.shape[-1]//3), angles_body.shape)
         coords_body = reconstruct_both_ways(lengths_body, angles_body, torsions_body, anchorCoords[:-1])
     else:
         coords_body = jnp.zeros((0,3))
 
-    # final set of reconstruction can be varying length
-    angles_end, torsions_end = process(angles_torsions_end)
-    lengths_end = jnp.broadcast_to(jnp.tile(BACKBONE_BOND_LENGTHS, angles_end.shape[-1]//3), angles_end.shape)
-    coords_end = reconstruct_both_ways(lengths_end, angles_end, torsions_end, anchorCoords[-2:])
+    if (angles_torsions_end is not None):
+        angles_torsions_end = angles_torsions_end[None, :-1]
 
-    bb_pos = jnp.concatenate([coords_body, coords_end, anchorCoords[-1]])
+        # final set of reconstruction can be varying length
+        angles_end, torsions_end = process(angles_torsions_end)
+        lengths_end = jnp.broadcast_to(jnp.tile(BACKBONE_BOND_LENGTHS, angles_end.shape[-1]//3), angles_end.shape)
+        coords_end = reconstruct_both_ways(lengths_end, angles_end, torsions_end, anchorCoords[-2:])
+        # add capping residue
+        coords_end = jnp.concatenate([coords_end, anchorCoords[-1]])
+    else:
+        coords_end = jnp.zeros((0,3))
+
+    bb_pos = jnp.concatenate([coords_body, coords_end])
     return bb_pos
     
 def place_sidechains(cloud_mask, point_ref_mask, angles_mask, bond_mask, bb_coords):
